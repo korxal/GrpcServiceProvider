@@ -4,11 +4,11 @@ using System.Text;
 
 namespace GrpcServiceProvider
 {
-     class ProtoGenerator
+    class ProtoGenerator
     {
 
         //This contains Assembly name with original class to be used in service
-        private  string BaseAssemblyName;
+        private string BaseAssemblyName;
 
 
         private static string GenerateMethodDefinition(string Name)
@@ -51,6 +51,15 @@ namespace GrpcServiceProvider
                 case "Double":
                 case "Decimal":
                     sb.Append("  double ");
+                    break;
+                case "Boolean":
+                    sb.Append("  bool ");
+                    break;
+                case "Single":
+                    sb.Append("  float ");
+                    break;
+                case "Char":
+                    sb.Append("  string ");
                     break;
                 default:
                     throw new Exception("Unsuported type:" + Name);
@@ -152,7 +161,7 @@ namespace GrpcServiceProvider
             foreach (var v in T.GetMethods())
             {
                 if (v.Module != T.Module) continue;// exclude native methods (ToString, GetHashCode etc...)
-              
+
                 //For each method we need Method definition and Request and Reply messages
                 ServiceDefinition.Append(GenerateMethodDefinition(v.Name));
                 Messages.Append(GenerateMessage(v.Name, v.ReturnType, true));//Reply - method execution result

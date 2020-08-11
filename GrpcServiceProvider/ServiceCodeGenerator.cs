@@ -22,11 +22,34 @@ namespace GrpcServiceProvider
                                   SyntaxKind.SimpleMemberAccessExpression,
                                   SyntaxFactory.IdentifierName(parent),
                                   SyntaxFactory.IdentifierName(fieldName + "Field")),
-                              SyntaxFactory.IdentifierName(parameterName)),
+                              SyntaxFactory.IdentifierName(parameterName[0].ToString().ToUpper() + parameterName.Substring(1))),
                       SyntaxFactory.MemberAccessExpression(
                           SyntaxKind.SimpleMemberAccessExpression,
                           SyntaxFactory.IdentifierName("R"),
                           SyntaxFactory.IdentifierName(ParameterPrefix + parameterName))));
+            return ss;
+        }
+
+        private ExpressionStatementSyntax GenerateToStringFieldAssignement(string parent, string fieldName, string parameterName, string ParameterPrefix = "")
+        {
+            // rez.SomeField = parameterName;
+            var ss = SyntaxFactory.ExpressionStatement(
+                      SyntaxFactory.AssignmentExpression(
+                          SyntaxKind.SimpleAssignmentExpression,
+                          SyntaxFactory.MemberAccessExpression(
+                              SyntaxKind.SimpleMemberAccessExpression,
+                              SyntaxFactory.MemberAccessExpression(
+                                  SyntaxKind.SimpleMemberAccessExpression,
+                                  SyntaxFactory.IdentifierName(parent),
+                                  SyntaxFactory.IdentifierName(fieldName + "Field")),
+                              SyntaxFactory.IdentifierName(parameterName[0].ToString().ToUpper() + parameterName.Substring(1))),
+                     SyntaxFactory.InvocationExpression(
+                          SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
+                          SyntaxFactory.MemberAccessExpression(
+                             SyntaxKind.SimpleMemberAccessExpression,
+                             SyntaxFactory.IdentifierName("R"),
+                             SyntaxFactory.IdentifierName(ParameterPrefix + parameterName)),
+                           SyntaxFactory.IdentifierName("ToString")))));
             return ss;
         }
 
@@ -77,11 +100,15 @@ namespace GrpcServiceProvider
                               SyntaxFactory.ArgumentList(
                                   SyntaxFactory.SingletonSeparatedList<ArgumentSyntax>(
                                       SyntaxFactory.Argument(
-                                          SyntaxFactory.MemberAccessExpression(
-                                              SyntaxKind.SimpleMemberAccessExpression,
-                                              SyntaxFactory.IdentifierName("R"),
-                                              SyntaxFactory.IdentifierName(ParameterPrefix + parameterName)
-                                              )))))));
+                                           SyntaxFactory.InvocationExpression(
+                                              SyntaxFactory.MemberAccessExpression(
+                                                 SyntaxKind.SimpleMemberAccessExpression,
+                                                    SyntaxFactory.MemberAccessExpression(
+                                                      SyntaxKind.SimpleMemberAccessExpression,
+                                                      SyntaxFactory.IdentifierName("R"),
+                                                      SyntaxFactory.IdentifierName(ParameterPrefix + parameterName)),
+                                                    SyntaxFactory.IdentifierName("ToUniversalTime")
+                                              ))))))));
 
             return ss;
 
@@ -91,7 +118,7 @@ namespace GrpcServiceProvider
         {
             List<ExpressionStatementSyntax> exs = new List<ExpressionStatementSyntax>();
 
-            
+
             var s = SyntaxFactory.ExpressionStatement(
                 SyntaxFactory.AssignmentExpression(
                     SyntaxKind.SimpleAssignmentExpression,
@@ -103,7 +130,7 @@ namespace GrpcServiceProvider
             exs.Add(s);
 
 
-           //Iterate through all fields
+            //Iterate through all fields
             foreach (var prop in p.GetFields())
             {
                 switch (prop.FieldType.ToString())
@@ -116,8 +143,16 @@ namespace GrpcServiceProvider
                         break;
                     case "System.Double":
                     case "System.String":
+                    case "System.Int32":
+                    case "System.Boolean":
+                    case "System.Single":
                         exs.Add(GenerateDirectFieldAssignement(parent, ReturnTypeName, prop.Name, ParameterNamePrefix));
                         break;
+
+                    case "System.Char":
+                        exs.Add(GenerateToStringFieldAssignement(parent, ReturnTypeName, prop.Name, ParameterNamePrefix));
+                        break;
+
                     default:
                         var rz = GenerateFieldAssignement(parent + "." + p.Name + "Field", prop.FieldType, prop.Name, prop.Name + ".");//Recursivly walk all tree
                         exs.AddRange(rz);
@@ -208,7 +243,7 @@ namespace GrpcServiceProvider
             }
             else
             {
-               //if original method returns custom class... 
+                //if original method returns custom class... 
                 var a = GenerateFieldAssignement("rez", m.ReturnType, m.ReturnType.Name); //Recusivly parse all class tree
                 foreach (var b in a)
                     MethodStatements.Add(b);
