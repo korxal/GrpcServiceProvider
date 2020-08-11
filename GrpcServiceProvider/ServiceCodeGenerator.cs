@@ -244,7 +244,7 @@ namespace GrpcServiceProvider
             else
             {
                 //if original method returns custom class... 
-                var a = GenerateFieldAssignement("rez", m.ReturnType, m.ReturnType.Name); //Recusivly parse all class tree
+                var a = GenerateFieldAssignement("rez", m.ReturnType, m.ReturnType.Name); //Recusivly parse the whole class tree
                 foreach (var b in a)
                     MethodStatements.Add(b);
             }
@@ -307,7 +307,7 @@ namespace GrpcServiceProvider
 
 
             //This creates an instance of original class to call original methods
-            //Original class must have parameterless constructor
+            //Original class *must* have parameterless constructor
             var ci = SyntaxFactory.VariableDeclaration(SyntaxFactory.ParseTypeName(T.Namespace + '.' + T.Name)) //Class Instance
                 .AddVariables(SyntaxFactory.VariableDeclarator("bl")
                 .WithInitializer(SyntaxFactory.EqualsValueClause(SyntaxFactory.ObjectCreationExpression(SyntaxFactory.QualifiedName(
