@@ -25,11 +25,18 @@ namespace GrpcServiceProvider
 
             //References to include in our new assembly
             List<MetadataReference> references = new List<MetadataReference>();
+
+            
+                
             references.Add(MetadataReference.CreateFromFile(Assembly.Load("netstandard").Location));
+            references.Add(MetadataReference.CreateFromFile(Assembly.Load("System.Core").Location));
+            references.Add(MetadataReference.CreateFromFile(typeof(System.Linq.Enumerable).Assembly.Location));
             references.Add(MetadataReference.CreateFromFile(Assembly.Load("System.Runtime").Location));
             references.Add(MetadataReference.CreateFromFile(Assembly.Load("Grpc.Core.Api").Location));
             references.Add(MetadataReference.CreateFromFile(Assembly.Load("System.Threading.Tasks").Location));
             references.Add(MetadataReference.CreateFromFile(Assembly.Load("System.Collections").Location));
+
+
             references.Add(MetadataReference.CreateFromFile(typeof(string).GetTypeInfo().Assembly.Location));
             references.Add(MetadataReference.CreateFromFile(typeof(Google.Protobuf.MessageParser).GetTypeInfo().Assembly.Location));
 

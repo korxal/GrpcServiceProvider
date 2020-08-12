@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 
@@ -10,156 +11,91 @@ namespace GrpcServiceProvider
 {
     class GrpcCodeGenerator
     {
-        private ExpressionStatementSyntax GenerateDirectFieldAssignement(string parent, string fieldName, string parameterName, string ParameterPrefix = "")
+
+        private string ConvertType(FieldInfo ft, string prefix)
         {
-            // rez.SomeField = parameterName;
-            var ss = SyntaxFactory.ExpressionStatement(
-                      SyntaxFactory.AssignmentExpression(
-                          SyntaxKind.SimpleAssignmentExpression,
-                          SyntaxFactory.MemberAccessExpression(
-                              SyntaxKind.SimpleMemberAccessExpression,
-                              SyntaxFactory.MemberAccessExpression(
-                                  SyntaxKind.SimpleMemberAccessExpression,
-                                  SyntaxFactory.IdentifierName(parent),
-                                  SyntaxFactory.IdentifierName(fieldName + "Field")),
-                              SyntaxFactory.IdentifierName(parameterName[0].ToString().ToUpper() + parameterName.Substring(1))),
-                      SyntaxFactory.MemberAccessExpression(
-                          SyntaxKind.SimpleMemberAccessExpression,
-                          SyntaxFactory.IdentifierName("R"),
-                          SyntaxFactory.IdentifierName(ParameterPrefix + parameterName))));
-            return ss;
-        }
-
-        private ExpressionStatementSyntax GenerateToStringFieldAssignement(string parent, string fieldName, string parameterName, string ParameterPrefix = "")
-        {
-            // rez.SomeField = parameterName;
-            var ss = SyntaxFactory.ExpressionStatement(
-                      SyntaxFactory.AssignmentExpression(
-                          SyntaxKind.SimpleAssignmentExpression,
-                          SyntaxFactory.MemberAccessExpression(
-                              SyntaxKind.SimpleMemberAccessExpression,
-                              SyntaxFactory.MemberAccessExpression(
-                                  SyntaxKind.SimpleMemberAccessExpression,
-                                  SyntaxFactory.IdentifierName(parent),
-                                  SyntaxFactory.IdentifierName(fieldName + "Field")),
-                              SyntaxFactory.IdentifierName(parameterName[0].ToString().ToUpper() + parameterName.Substring(1))),
-                     SyntaxFactory.InvocationExpression(
-                          SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression,
-                          SyntaxFactory.MemberAccessExpression(
-                             SyntaxKind.SimpleMemberAccessExpression,
-                             SyntaxFactory.IdentifierName("R"),
-                             SyntaxFactory.IdentifierName(ParameterPrefix + parameterName)),
-                           SyntaxFactory.IdentifierName("ToString")))));
-            return ss;
-        }
-
-        private ExpressionStatementSyntax GenerateDecimalFieldAssignement(string parent, string fieldName, string parameterName, string ParameterPrefix = "")
-        {
-            // rez.SomeField = (double)parameterName;
-
-            var ss = SyntaxFactory.ExpressionStatement(
-                 SyntaxFactory.AssignmentExpression(
-                     SyntaxKind.SimpleAssignmentExpression,
-                     SyntaxFactory.MemberAccessExpression(
-                         SyntaxKind.SimpleMemberAccessExpression,
-                         SyntaxFactory.MemberAccessExpression(
-                             SyntaxKind.SimpleMemberAccessExpression,
-                             SyntaxFactory.IdentifierName(parent),
-                             SyntaxFactory.IdentifierName(fieldName + "Field")),
-                         SyntaxFactory.IdentifierName(parameterName)),
-                     SyntaxFactory.CastExpression(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.DoubleKeyword)),
-                 SyntaxFactory.MemberAccessExpression(
-                     SyntaxKind.SimpleMemberAccessExpression,
-                     SyntaxFactory.IdentifierName("R"),
-                     SyntaxFactory.IdentifierName(ParameterPrefix + parameterName)))));
-            return ss;
-
-        }
-
-        private ExpressionStatementSyntax GenerateDateTimeFieldAssignement(string parent, string fieldName, string parameterName, string ParameterPrefix = "")
-        {
-            // rez.SomeField = Timestamp.FromDateTime(parameterName);
-
-            var ss = SyntaxFactory.ExpressionStatement(
-                      SyntaxFactory.AssignmentExpression(
-                          SyntaxKind.SimpleAssignmentExpression,
-                          SyntaxFactory.MemberAccessExpression(
-                              SyntaxKind.SimpleMemberAccessExpression,
-                              SyntaxFactory.MemberAccessExpression(
-                                  SyntaxKind.SimpleMemberAccessExpression,
-                                  SyntaxFactory.IdentifierName(parent),
-                                  SyntaxFactory.IdentifierName(fieldName + "Field")),
-                              SyntaxFactory.IdentifierName(parameterName)),
-
-                          SyntaxFactory.InvocationExpression(
-                              SyntaxFactory.MemberAccessExpression(
-                                  SyntaxKind.SimpleMemberAccessExpression,
-                                  SyntaxFactory.IdentifierName("Timestamp"),
-                                  SyntaxFactory.IdentifierName("FromDateTime")))
-                          .WithArgumentList(
-                              SyntaxFactory.ArgumentList(
-                                  SyntaxFactory.SingletonSeparatedList<ArgumentSyntax>(
-                                      SyntaxFactory.Argument(
-                                           SyntaxFactory.InvocationExpression(
-                                              SyntaxFactory.MemberAccessExpression(
-                                                 SyntaxKind.SimpleMemberAccessExpression,
-                                                    SyntaxFactory.MemberAccessExpression(
-                                                      SyntaxKind.SimpleMemberAccessExpression,
-                                                      SyntaxFactory.IdentifierName("R"),
-                                                      SyntaxFactory.IdentifierName(ParameterPrefix + parameterName)),
-                                                    SyntaxFactory.IdentifierName("ToUniversalTime")
-                                              ))))))));
-
-            return ss;
-
-        }
-
-        private List<ExpressionStatementSyntax> GenerateFieldAssignement(string parent, Type p, string ReturnTypeName, string ParameterNamePrefix = "")
-        {
-            List<ExpressionStatementSyntax> exs = new List<ExpressionStatementSyntax>();
-
-
-            var s = SyntaxFactory.ExpressionStatement(
-                SyntaxFactory.AssignmentExpression(
-                    SyntaxKind.SimpleAssignmentExpression,
-                    SyntaxFactory.MemberAccessExpression(
-                        SyntaxKind.SimpleMemberAccessExpression,
-                        SyntaxFactory.IdentifierName(parent),
-                        SyntaxFactory.IdentifierName(ReturnTypeName + "Field")),
-                    SyntaxFactory.ObjectCreationExpression(SyntaxFactory.IdentifierName(ReturnTypeName)).WithArgumentList(SyntaxFactory.ArgumentList())));
-            exs.Add(s);
-
-
-            //Iterate through all fields
-            foreach (var prop in p.GetFields())
+            switch (ft.FieldType.FullName)
             {
-                switch (prop.FieldType.ToString())
-                {
-                    case "System.DateTime":
-                        exs.Add(GenerateDateTimeFieldAssignement(parent, ReturnTypeName, prop.Name, ParameterNamePrefix));
-                        break;
-                    case "System.Decimal":
-                        exs.Add(GenerateDecimalFieldAssignement(parent, ReturnTypeName, prop.Name, ParameterNamePrefix));
-                        break;
-                    case "System.Double":
-                    case "System.String":
-                    case "System.Int32":
-                    case "System.Boolean":
-                    case "System.Single":
-                        exs.Add(GenerateDirectFieldAssignement(parent, ReturnTypeName, prop.Name, ParameterNamePrefix));
-                        break;
+                case "System.DateTime":
+                    return "Timestamp.FromDateTime(" + prefix + "." + ft.Name + ".ToUniversalTime())";
 
-                    case "System.Char":
-                        exs.Add(GenerateToStringFieldAssignement(parent, ReturnTypeName, prop.Name, ParameterNamePrefix));
-                        break;
+                case "System.Decimal":
+                    return "(double)" + prefix + "." + ft.Name;
+                case "System.Double":
+                case "System.String":
+                case "System.Int32":
+                case "System.Boolean":
+                case "System.Single":
+                    return prefix + "." + ft.Name;
+                case "System.Char":
+                    return prefix + "." + ft.Name + ".ToString()";
 
-                    default:
-                        var rz = GenerateFieldAssignement(parent + "." + p.Name + "Field", prop.FieldType, prop.Name, prop.Name + ".");//Recursivly walk all tree
-                        exs.AddRange(rz);
-                        break;
-                }
+                default: throw new Exception("Unsupported type - " + ft.FieldType.Name);
             }
-            return exs;
+        }
+
+        // rez.QuoteField.Balances.AddRange(R.Balances.Select(x=> new Money() {
+
+
+
+        private string GenerateGenericAssignement(string TargetPrefix, string SourcePrefix, string FieldPostfix, FieldInfo f)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            var NestedType = f.FieldType.GetGenericArguments()[0];
+
+            sb.AppendLine("if(" + SourcePrefix + f.Name + "!=null)");
+            sb.AppendLine(TargetPrefix + f.Name  + ".AddRange(" + SourcePrefix + f.Name + ".Select(x=> new " + NestedType.Name + "(){");
+
+            sb.AppendLine(GenerateFieldAssignement("", "x","", NestedType,true));
+
+            sb.AppendLine("));");
+
+            return sb.ToString();
+        }
+
+        private List<StatementSyntax> GenerateGenericAssignements(string TargetPrefix, string SourcePrefix, string FieldPostfix, Type t)
+        {
+            List<StatementSyntax> GenericAssignements = new List<StatementSyntax>();
+            foreach (FieldInfo g in t.GetFields().Where(f => f.FieldType.IsGenericType))
+                GenericAssignements.Add(SyntaxFactory.ParseStatement(GenerateGenericAssignement(TargetPrefix+t.Name+ FieldPostfix+".", SourcePrefix,FieldPostfix, g)));
+            return GenericAssignements;
+        }
+
+
+        private string GenerateFieldAssignement(string TargetPrefix, string SourcePrefix, string FieldPostfix, Type t,bool NoHeader =false)
+        {
+            StringBuilder sb = new StringBuilder();
+
+           if(!NoHeader) sb.AppendLine(t.Name + FieldPostfix + " = new " + t.Name + "(){");
+
+            foreach (var f in t.GetFields())
+            {
+                if (f.FieldType.Module != t.Module && !f.FieldType.IsGenericType)
+                {
+                    sb.AppendLine(f.Name[0].ToString().ToUpper() + f.Name.Substring(1) + " = " + ConvertType(f, SourcePrefix) + ",");
+                }
+
+                if (f.FieldType.Module != t.Module && f.FieldType.IsGenericType)
+                {
+                    //Skip Generic
+                }
+
+                if (f.FieldType.Module == t.Module)
+                {
+                    //Local class
+                    sb.Append(GenerateFieldAssignement(f.Name, SourcePrefix + "." + f.Name, FieldPostfix, f.FieldType));
+                    sb.Append(",\r\n");
+                }
+
+            }
+
+
+            sb.AppendLine("}");
+
+
+
+            return sb.ToString();
         }
 
         private MethodDeclarationSyntax CreateMethodSource(MethodInfo m)
@@ -180,92 +116,25 @@ namespace GrpcServiceProvider
                             )));
             }
 
-            //Output of original method
-            var ResultDeclaration = SyntaxFactory.LocalDeclarationStatement
-                           (
-                               SyntaxFactory.VariableDeclaration
-                               (
-                                   SyntaxFactory.IdentifierName("var")
-                               )
-                               .WithVariables
-                               (
-                                   SyntaxFactory.SeparatedList<VariableDeclaratorSyntax>().Add(
-                                       SyntaxFactory.VariableDeclarator("R")
-                                   .WithInitializer(
-                                      SyntaxFactory.EqualsValueClause(
-                                      SyntaxFactory.InvocationExpression(
-                                        SyntaxFactory.MemberAccessExpression(
-                                             SyntaxKind.SimpleMemberAccessExpression,
-                                              SyntaxFactory.IdentifierName("bl"),
-                                             SyntaxFactory.IdentifierName(m.Name)))
-                                    .WithArgumentList(
-                                       SyntaxFactory.ArgumentList(LocalParamList)
-                             ))))));
-
-
-            MethodStatements.Add(ResultDeclaration);
-
-
-            var ReturnObjectDeclaration = SyntaxFactory.LocalDeclarationStatement
-                         (
-                             SyntaxFactory.VariableDeclaration
-                             (
-                                 SyntaxFactory.IdentifierName("var")
-                             )
-                             .WithVariables(
-                                 SyntaxFactory.SeparatedList<VariableDeclaratorSyntax>().Add(
-                                      SyntaxFactory.VariableDeclarator("rez")
-                                        .WithInitializer(
-                                              SyntaxFactory.EqualsValueClause(
-                                                  SyntaxFactory.ObjectCreationExpression(
-                                                      SyntaxFactory.IdentifierName(m.Name + "Reply"))
-                                                  .WithArgumentList(SyntaxFactory.ArgumentList())))
-                                 )));
-
-            MethodStatements.Add(ReturnObjectDeclaration);
-
-
             //if method returns simple type (string, int etc...)
             if (m.ReturnType.Module != m.Module)
             {
-
-                var AssignRez = SyntaxFactory.ExpressionStatement(
-                    SyntaxFactory.AssignmentExpression(
-                        SyntaxKind.SimpleAssignmentExpression,
-                        SyntaxFactory.MemberAccessExpression(
-                            SyntaxKind.SimpleMemberAccessExpression,
-                            SyntaxFactory.IdentifierName("rez"),
-                            SyntaxFactory.IdentifierName("Result")
-                            ),
-                        SyntaxFactory.IdentifierName("R")));
-
-                MethodStatements.Add(AssignRez);
+                MethodStatements.Add(SyntaxFactory.ParseStatement("return Task.FromResult(new " + m.Name + "Reply() { Result= bl." + m.Name + "(" + LocalParamList + ") });"));
             }
             else
             {
                 //if original method returns custom class... 
-                var a = GenerateFieldAssignement("rez", m.ReturnType, m.ReturnType.Name); //Recusivly parse the whole class tree
-                foreach (var b in a)
-                    MethodStatements.Add(b);
+                MethodStatements.Add(SyntaxFactory.ParseStatement("var R = bl." + m.Name + "(" + LocalParamList + ");"));
+                var a = GenerateFieldAssignement("rez.", "R", "Field", m.ReturnType); //Recusivly parse all class tree
+                var v = "var rez = new  " + m.Name + "Reply() {" + a + "};";
+                MethodStatements.Add(SyntaxFactory.ParseStatement(v));
+                MethodStatements.AddRange(GenerateGenericAssignements("rez.", "R.", "Field", m.ReturnType));
+                MethodStatements.Add(SyntaxFactory.ParseStatement("return Task.FromResult(rez);"));
+
+
+
             }
 
-            //  return Task.FromResult(rez);
-            var ReturnStatement = SyntaxFactory.ReturnStatement(
-
-                    SyntaxFactory.InvocationExpression(
-                        SyntaxFactory.MemberAccessExpression(
-                             SyntaxKind.SimpleMemberAccessExpression,
-                             SyntaxFactory.IdentifierName("Task"),
-                             SyntaxFactory.IdentifierName("FromResult")))
-                    .WithArgumentList(
-                        SyntaxFactory.ArgumentList(
-                            SyntaxFactory.SingletonSeparatedList<ArgumentSyntax>(
-                                SyntaxFactory.Argument(
-                                    SyntaxFactory.IdentifierName("rez")
-                                    )))));
-
-
-            MethodStatements.Add(ReturnStatement);
 
             var MethodBody = SyntaxFactory.Block(MethodStatements);
 
@@ -296,10 +165,14 @@ namespace GrpcServiceProvider
 
             var sf = SyntaxFactory.CompilationUnit();
             sf = sf.AddUsings(SyntaxFactory.UsingDirective(SyntaxFactory.ParseName("System")));
+            sf = sf.AddUsings(SyntaxFactory.UsingDirective(SyntaxFactory.ParseName("System.Linq")));
             sf = sf.AddUsings(SyntaxFactory.UsingDirective(SyntaxFactory.ParseName("System.Threading.Tasks")));
+            sf = sf.AddUsings(SyntaxFactory.UsingDirective(SyntaxFactory.ParseName("System.Collections")));
+            sf = sf.AddUsings(SyntaxFactory.UsingDirective(SyntaxFactory.ParseName("System.Collections.Generic")));
             sf = sf.AddUsings(SyntaxFactory.UsingDirective(SyntaxFactory.ParseName("Grpc.Core")));
             sf = sf.AddUsings(SyntaxFactory.UsingDirective(SyntaxFactory.ParseName("Google.Protobuf.WellKnownTypes")));
             sf = sf.AddUsings(SyntaxFactory.UsingDirective(SyntaxFactory.ParseName(T.Name)));
+
             var ns = SyntaxFactory.NamespaceDeclaration(SyntaxFactory.ParseName(T.Name + "GRPCService")).NormalizeWhitespace();
             var cd = SyntaxFactory.ClassDeclaration(T.Name + "ServiceProvider");//Class declaration
             cd = cd.AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword));
@@ -307,7 +180,7 @@ namespace GrpcServiceProvider
 
 
             //This creates an instance of original class to call original methods
-            //Original class *must* have parameterless constructor
+            //Original class must have parameterless constructor
             var ci = SyntaxFactory.VariableDeclaration(SyntaxFactory.ParseTypeName(T.Namespace + '.' + T.Name)) //Class Instance
                 .AddVariables(SyntaxFactory.VariableDeclarator("bl")
                 .WithInitializer(SyntaxFactory.EqualsValueClause(SyntaxFactory.ObjectCreationExpression(SyntaxFactory.QualifiedName(
@@ -334,6 +207,10 @@ namespace GrpcServiceProvider
                .NormalizeWhitespace()
                .ToFullString();
             return code;
+
+
+
+
         }
 
     }
