@@ -28,15 +28,12 @@ namespace GrpcServiceProvider
 
 
 
+       
+
         private string ParseSimpleType(Type t, int i = 1, string name = "result")
         {
-            return ParseSimpleType(t.Name, i, name);
-        }
-
-        private string ParseSimpleType(string Name, int i = 1, string name = "result")
-        {
             StringBuilder sb = new StringBuilder();
-            switch (Name)
+            switch (t.Name)
             {
                 case "String":
                     sb.Append("  string ");
@@ -55,14 +52,17 @@ namespace GrpcServiceProvider
                 case "Boolean":
                     sb.Append("  bool ");
                     break;
+
                 case "Single":
                     sb.Append("  float ");
                     break;
+
                 case "Char":
                     sb.Append("  string ");
                     break;
+
                 default:
-                    throw new Exception("Unsuported type:" + Name);
+                    throw new Exception("Unsuported type:" + t.Name);
             }
 
             sb.Append(name);
@@ -96,7 +96,20 @@ namespace GrpcServiceProvider
                 }
                 else
                 {
-                    sb.Append(ParseSimpleType(f.FieldType.Name, i, f.Name));
+                    if (f.FieldType.IsGenericType)
+                    { 
+                        var NestedType = f.FieldType.GetGenericArguments()[0];
+                        ChildMessages.Append(ParseClassType(NestedType));
+                        sb.Append("  repeated ");
+                        sb.Append(NestedType.Name);
+                        sb.Append(" ");
+                        sb.Append(f.Name);
+                        sb.Append(" = ");
+                        sb.Append(i);
+                        sb.Append(";\r\n");
+                    }
+                    else
+                        sb.Append(ParseSimpleType(f.FieldType, i, f.Name));
                 }
 
                 i++;
