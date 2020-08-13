@@ -61,6 +61,10 @@ namespace GrpcServiceProvider
                     sb.Append("  string ");
                     break;
 
+                case "Int64":
+                    sb.Append("  sint64 ");
+                    break;
+
                 default:
                     throw new Exception("Unsuported type:" + t.Name);
             }

@@ -24,6 +24,7 @@ namespace GrpcServiceProvider
                 case "System.Double":
                 case "System.String":
                 case "System.Int32":
+                case "System.Int64":
                 case "System.Boolean":
                 case "System.Single":
                     return prefix + "." + ft.Name;
