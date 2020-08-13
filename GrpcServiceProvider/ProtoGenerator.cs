@@ -28,7 +28,7 @@ namespace GrpcServiceProvider
 
 
 
-       
+
 
         private string ParseSimpleType(Type t, int i = 1, string name = "result")
         {
@@ -101,7 +101,7 @@ namespace GrpcServiceProvider
                 else
                 {
                     if (f.FieldType.IsGenericType)
-                    { 
+                    {
                         var NestedType = f.FieldType.GetGenericArguments()[0];
                         ChildMessages.Append(ParseClassType(NestedType));
                         sb.Append("  repeated ");
@@ -204,20 +204,32 @@ namespace GrpcServiceProvider
                 {
                     case "string":
                     case "String":
-                        sb.Append("  string ");
-                        sb.Append(p.Name);
-                        sb.Append(" = ");
-                        sb.Append(i);
-                        sb.Append(";\r\n");
+                        sb.Append("  string " + p.Name + " = " + i + ";\r\n");
                         i++;
                         break;
                     case "int":
                     case "Int32":
-                        sb.Append("  sint32 ");
-                        sb.Append(p.Name);
-                        sb.Append(" = ");
-                        sb.Append(i);
-                        sb.Append(";\r\n");
+                        sb.Append("  sint32 " + p.Name + " = " + i + ";\r\n");
+                        i++;
+                        break;
+                    case "Int64":
+                    case "long":
+                        sb.Append("  sint64 " + p.Name + " = " + i + ";\r\n");
+                        i++;
+                        break;
+
+                    case "Decimal":
+                        sb.Append("  double " + p.Name + " = " + i + ";\r\n");
+                        i++;
+                        break;
+
+                    case "DateTime":
+                        sb.Append("  google.protobuf.Timestamp " + p.Name + " = " + i + ";\r\n");
+                        i++;
+                        break;
+
+                    case "Boolean":
+                        sb.Append("  bool " + p.Name + " = " + i + ";\r\n");
                         i++;
                         break;
 
