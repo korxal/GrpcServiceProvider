@@ -34,7 +34,6 @@ namespace GrpcServiceProvider
                 case "System.Decimal":
                     return "(double)" + prefix + FieldName;
                 case "System.Double":
-                case "System.String":
                 case "System.Int32":
                 case "System.Int64":
                 case "System.Boolean":
@@ -42,6 +41,9 @@ namespace GrpcServiceProvider
                     return prefix + FieldName;
                 case "System.Char":
                     return prefix + FieldName + ".ToString()";
+
+                case "System.String":
+                    return prefix + FieldName +" ==null? \"\": "+ prefix + FieldName;
 
                 default: throw new Exception("Unsupported type - " + FieldtypeName);
             }
