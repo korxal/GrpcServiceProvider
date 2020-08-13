@@ -28,7 +28,7 @@ namespace GrpcServiceProvider
 
 
 
-
+        private List<String> DefinedSubTypes = new List<String>();
 
         private string ParseSimpleType(Type t, int i = 1, string name = "result")
         {
@@ -79,11 +79,14 @@ namespace GrpcServiceProvider
 
         private string ParseClassType(Type t)
         {
+            if(DefinedSubTypes.Contains( t.Name)) return "";
+            DefinedSubTypes.Add(t.Name);
             int i = 1;
             StringBuilder sb = new StringBuilder();
             StringBuilder ChildMessages = new StringBuilder();
             sb.Append("message ");
             sb.Append(t.Name); sb.Append(" {\r\n");
+
 
             foreach (var f in t.GetFields())
             {
@@ -93,7 +96,7 @@ namespace GrpcServiceProvider
                     sb.Append("  ");
                     sb.Append(f.FieldType.Name);
                     sb.Append(" ");
-                    sb.Append(f.FieldType.Name);
+                    sb.Append(f.Name);
                     sb.Append("Field = ");
                     sb.Append(i);
                     sb.Append(";\r\n");
@@ -157,6 +160,7 @@ namespace GrpcServiceProvider
         //This method converts imput type to proto file
         public string GenerateProtoss(Type T)
         {
+            DefinedSubTypes = new List<string>();
             BaseAssemblyName = T.Assembly.FullName;
             StringBuilder Messages = new StringBuilder(); //Message definitions
             StringBuilder ServiceDefinition = new StringBuilder(); //Service definitions
