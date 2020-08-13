@@ -156,8 +156,6 @@ namespace GrpcServiceProvider
                 MethodStatements.AddRange(GenerateGenericAssignements("rez.", "R.", "Field", m.ReturnType));
                 MethodStatements.Add(SyntaxFactory.ParseStatement("return Task.FromResult(rez);"));
 
-
-
             }
 
 
@@ -232,10 +230,6 @@ namespace GrpcServiceProvider
                .NormalizeWhitespace()
                .ToFullString();
             return code;
-
-
-
-
         }
 
     }
