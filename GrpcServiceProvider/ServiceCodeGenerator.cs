@@ -24,7 +24,7 @@ namespace GrpcServiceProvider
             return ConvertTypeToProto(FieldtypeName, FieldName, "");
         }
 
-        private string ConvertTypeToProto(string FieldtypeName, string FieldName, string prefix="")
+        private string ConvertTypeToProto(string FieldtypeName, string FieldName, string prefix = "")
         {
             switch (FieldtypeName)
             {
@@ -32,16 +32,16 @@ namespace GrpcServiceProvider
                     return "Timestamp.FromDateTime(" + prefix + FieldName + ".ToUniversalTime())";
 
                 case "System.Decimal":
-                    return "(double)" +prefix + FieldName;
+                    return "(double)" + prefix + FieldName;
                 case "System.Double":
                 case "System.String":
                 case "System.Int32":
                 case "System.Int64":
                 case "System.Boolean":
                 case "System.Single":
-                    return prefix+FieldName;
+                    return prefix + FieldName;
                 case "System.Char":
-                    return prefix+ FieldName + ".ToString()";
+                    return prefix + FieldName + ".ToString()";
 
                 default: throw new Exception("Unsupported type - " + FieldtypeName);
             }
@@ -81,9 +81,7 @@ namespace GrpcServiceProvider
 
             sb.AppendLine("if(" + SourcePrefix + f.Name + "!=null)");
             sb.AppendLine(TargetPrefix + f.Name + ".AddRange(" + SourcePrefix + f.Name + ".Select(x=> new " + NestedType.Name + "(){");
-
-            sb.AppendLine(GenerateFieldAssignement("", "x", "", NestedType, true));
-
+            sb.AppendLine(GenerateFieldAssignement( "x", "", f.Name,NestedType, true));
             sb.AppendLine("));");
 
             return sb.ToString();
@@ -98,17 +96,17 @@ namespace GrpcServiceProvider
         }
 
 
-        private string GenerateFieldAssignement(string TargetPrefix, string SourcePrefix, string FieldPostfix, Type t, bool NoHeader = false)
+        private string GenerateFieldAssignement( string SourcePrefix, string FieldPostfix, string FieldName ,Type t, bool NoHeader = false)
         {
             StringBuilder sb = new StringBuilder();
 
-            if (!NoHeader) sb.AppendLine(t.Name + FieldPostfix + " = new " + t.Name + "(){");
+            if (!NoHeader) sb.AppendLine(FieldName[0].ToString().ToUpper()+FieldName.Substring(1) + FieldPostfix + " =  " +SourcePrefix +"==null? null:   new " + t.Name + "(){");
 
             foreach (var f in t.GetFields())
             {
                 if (f.FieldType.Module != t.Module && !f.FieldType.IsGenericType)
                 {
-                    sb.AppendLine(f.Name[0].ToString().ToUpper() + f.Name.Substring(1) + " = " + ConvertFieldType(f, SourcePrefix+".") + ",");
+                    sb.AppendLine(f.Name[0].ToString().ToUpper() + f.Name.Substring(1) + " = " + ConvertFieldType(f, SourcePrefix + ".") + ",");
                 }
 
                 if (f.FieldType.Module != t.Module && f.FieldType.IsGenericType)
@@ -119,17 +117,12 @@ namespace GrpcServiceProvider
                 if (f.FieldType.Module == t.Module)
                 {
                     //Local class
-                    sb.Append(GenerateFieldAssignement(f.Name, SourcePrefix + "." + f.Name, FieldPostfix, f.FieldType));
+                    sb.Append(GenerateFieldAssignement( SourcePrefix + "." + f.Name, FieldPostfix,f.Name , f.FieldType));
                     sb.Append(",\r\n");
                 }
 
             }
-
-
             sb.AppendLine("}");
-
-
-
             return sb.ToString();
         }
 
@@ -142,7 +135,7 @@ namespace GrpcServiceProvider
             StringBuilder LocalParamList = new StringBuilder();
             foreach (var par in m.GetParameters())
             {
-                LocalParamList.Append(ConvertTypeFromProto(par.ParameterType.FullName, "request." + par.Name[0].ToString().ToUpper() + par.Name.Substring(1))+" ,");
+                LocalParamList.Append(ConvertTypeFromProto(par.ParameterType.FullName, "request." + par.Name[0].ToString().ToUpper() + par.Name.Substring(1)) + " ,");
             }
             LocalParamList.Length--;
 
@@ -150,14 +143,14 @@ namespace GrpcServiceProvider
             //if method returns simple type (string, int etc...)
             if (m.ReturnType.Module != m.Module)
             {
-                var c = ConvertTypeToProto(m.ReturnType.FullName, "bl."+m.Name+"(" + LocalParamList + ")");
-                MethodStatements.Add(SyntaxFactory.ParseStatement("return Task.FromResult(new " + m.Name + "Reply() { Result= " +c+" });"));
+                var c = ConvertTypeToProto(m.ReturnType.FullName, "bl." + m.Name + "(" + LocalParamList + ")");
+                MethodStatements.Add(SyntaxFactory.ParseStatement("return Task.FromResult(new " + m.Name + "Reply() { Result= " + c + " });"));
             }
             else
             {
                 //if original method returns custom class... 
                 MethodStatements.Add(SyntaxFactory.ParseStatement("var R = bl." + m.Name + "(" + LocalParamList + ");"));
-                var a = GenerateFieldAssignement("rez.", "R", "Field", m.ReturnType); //Recusivly parse all class tree
+                var a = GenerateFieldAssignement( "R", "Field", m.ReturnType.Name, m.ReturnType); //Recusivly parse all class tree
                 var v = "var rez = new  " + m.Name + "Reply() {" + a + "};";
                 MethodStatements.Add(SyntaxFactory.ParseStatement(v));
                 MethodStatements.AddRange(GenerateGenericAssignements("rez.", "R.", "Field", m.ReturnType));
