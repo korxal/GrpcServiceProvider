@@ -9,7 +9,7 @@ namespace GrpcServiceProvider
     class ProtocUtils
     {
         //This method invokes protoc executable to generate cs files from proto file
-        public static void BuildGrpcSourceFiles(string Protoss, out string protossSourcePath, out string grpcSourcePath)
+        public static void BuildGrpcSourceFiles(string Protoss, string ServiceName,out string protossSourcePath, out string grpcSourcePath)
         {
             var home = AppDomain.CurrentDomain.BaseDirectory;
             if (!File.Exists(home + "protoc.exe")) throw new FileNotFoundException("protoc is missing from " + home); 
@@ -17,9 +17,9 @@ namespace GrpcServiceProvider
 
             //Generated proto file will be stored in this folder
             string protossDirPath = home + @"Protos";
-            string protossPath = home + @"Protos\Protoss.proto";
-            protossSourcePath = home + @"out\Protoss.cs";
-            grpcSourcePath = home + @"out\ProtossGrpc.cs";
+            string protossPath = home + @"Protos\"+ServiceName+".proto";
+            protossSourcePath = home + @"out\"+ServiceName+".cs";
+            grpcSourcePath = home + @"out\"+ServiceName+"Grpc.cs";
             if (!Directory.Exists(home + "\\Protos")) Directory.CreateDirectory(home + "\\Protos");
             if (!Directory.Exists(home + "\\Out")) Directory.CreateDirectory(home + "\\Out");
             File.WriteAllText(protossPath, Protoss);

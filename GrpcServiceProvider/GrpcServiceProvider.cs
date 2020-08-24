@@ -26,15 +26,15 @@ namespace GrpcService
             
             ProtoGenerator pg = new ProtoGenerator();
             GrpcCodeGenerator cg = new GrpcCodeGenerator();
-
+            String ServiceName = T.Name;
             //Step 1 - build proto file for our class, 
             string ProtoDef = pg.GenerateProtoss(T);
             //Step 2 -  Call 'protoc' executable to build *.cs files for our proto file. Cs files is written to 'out' folder of main executable
-            ProtocUtils.BuildGrpcSourceFiles(ProtoDef, out string protossSourcePath, out string grpcSourcePath);
+            ProtocUtils.BuildGrpcSourceFiles(ProtoDef,ServiceName, out string protossSourcePath, out string grpcSourcePath);
             //Step 3 - Write code for our Service. This method provides source code for our grpc service
             string GrpcOverrideSource = cg.CreateServiceSource(T);
             //Step 4 - Compile everything on runtime
-            Assembly GrpcServiceAssembly = GrpcCodeCompiler.CompileGrpcServiceSources(protossSourcePath, grpcSourcePath, GrpcOverrideSource, T);
+            Assembly GrpcServiceAssembly = GrpcCodeCompiler.CompileGrpcServiceSources(protossSourcePath, grpcSourcePath, GrpcOverrideSource, T, ServiceName);
             //Step 5 - return instance of compiled assembly
             return GrpcServiceAssembly.CreateInstance(T.Name + "GRPCService." + T.Name + "ServiceProvider");
         }
