@@ -15,10 +15,10 @@ namespace GrpcServiceProvider
     {
 
         //This method compiles everything in one assembly
-        public static Assembly CompileGrpcServiceSources(string protossSourcePath, string grpcSourcePath, string GrpcOverrideSource, Type BaseServiceType)
+        public static Assembly CompileGrpcServiceSources(string protossSourcePath, string grpcSourcePath, string GrpcOverrideSource, Type BaseServiceType, string ServiceName)
         {
             var home = AppDomain.CurrentDomain.BaseDirectory;
-            File.WriteAllText(home + "Out\\OverrideSource.cs", GrpcOverrideSource);
+            File.WriteAllText(home + "Out\\" + ServiceName + "OverrideSource.cs", GrpcOverrideSource);
             string ProtossTreeSource = File.ReadAllText(protossSourcePath);//Output of protoc executable, 
             string GrpcTreeSource = File.ReadAllText(grpcSourcePath);//Output of protoc executable
             SyntaxTree GrpcTree = CSharpSyntaxTree.ParseText(GrpcTreeSource); //Output of runtime code writer
