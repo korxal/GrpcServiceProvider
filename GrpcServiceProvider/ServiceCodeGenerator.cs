@@ -12,6 +12,12 @@ namespace GrpcServiceProvider
     class GrpcCodeGenerator
     {
 
+        class FieldAssignement
+        {
+            public string Result;
+            public List<StatementSyntax> GenericAssignements;
+        }
+
 
         private string ConvertFieldType(FieldInfo ft, string prefix)
         {
@@ -43,7 +49,7 @@ namespace GrpcServiceProvider
                     return prefix + FieldName + ".ToString()";
 
                 case "System.String":
-                    return prefix + FieldName +" ==null? \"\": "+ prefix + FieldName;
+                    return prefix + FieldName + " ==null? \"\": " + prefix + FieldName;
 
                 default: throw new Exception("Unsupported type - " + FieldtypeName);
             }
@@ -75,17 +81,33 @@ namespace GrpcServiceProvider
 
 
 
-        private string GenerateGenericAssignement(string TargetPrefix, string SourcePrefix, string FieldPostfix, FieldInfo f)
+        private string GenerateGenericAssignement(string TargetPrefix, string SourcePrefix, string FieldPostfix, FieldInfo f, int depth = 0)
         {
             StringBuilder sb = new StringBuilder();
 
             var NestedType = f.FieldType.GetGenericArguments()[0];
 
-            sb.AppendLine("if(" + SourcePrefix + f.Name + "!=null)");
-            sb.AppendLine(TargetPrefix + f.Name + ".AddRange(" + SourcePrefix + f.Name + ".Select(x=> new " + NestedType.Name + "(){");
-            sb.AppendLine(GenerateFieldAssignement( "x", "", f.Name,NestedType, true));
-            sb.AppendLine("));");
+            sb.AppendLine("if(" + SourcePrefix + f.Name + "!=null){");
 
+            sb.AppendLine("for( int l" + depth + "=0; l"+depth+"< " + SourcePrefix + f.Name + ".Count;l"+depth+"++){");
+
+            sb.AppendLine(TargetPrefix + f.Name + ".Add( new " + NestedType.Name + "() {");
+
+
+
+
+            sb.AppendLine(GenerateFieldAssignement(SourcePrefix + f.Name+"[l"+depth+"]", "", f.Name, TargetPrefix, NestedType, true).Result);
+
+            //foreach end
+            sb.AppendLine(");");
+
+
+            foreach (FieldInfo g in NestedType.GetFields().Where(f => f.FieldType.IsGenericType))
+            {
+                sb.AppendLine(GenerateGenericAssignement(TargetPrefix + f.Name+ "[l" + depth + "].", SourcePrefix + f.Name + "[l" + depth + "].", FieldPostfix, g, depth + 1));
+            }
+
+            sb.AppendLine("}}");
             return sb.ToString();
         }
 
@@ -98,11 +120,12 @@ namespace GrpcServiceProvider
         }
 
 
-        private string GenerateFieldAssignement( string SourcePrefix, string FieldPostfix, string FieldName ,Type t, bool NoHeader = false)
+        private FieldAssignement GenerateFieldAssignement(string SourcePrefix, string FieldPostfix, string FieldName, string TargetPrefix, Type t, bool NoHeader = false)
         {
             StringBuilder sb = new StringBuilder();
+            List<StatementSyntax> ass = new List<StatementSyntax>();
 
-            if (!NoHeader) sb.AppendLine(FieldName[0].ToString().ToUpper()+FieldName.Substring(1) + FieldPostfix + " =  " +SourcePrefix +"==null? null:   new " + t.Name + "(){");
+            if (!NoHeader) sb.AppendLine(FieldName[0].ToString().ToUpper() + FieldName.Substring(1) + FieldPostfix + " =  " + SourcePrefix + "==null? null:   new " + t.Name + "(){");
 
             foreach (var f in t.GetFields())
             {
@@ -114,18 +137,21 @@ namespace GrpcServiceProvider
                 if (f.FieldType.Module != t.Module && f.FieldType.IsGenericType)
                 {
                     //Skip Generic
+                    // ass.AddRange(GenerateGenericAssignements(TargetPrefix + ".", SourcePrefix + ".", "Field", t));
                 }
 
                 if (f.FieldType.Module == t.Module)
                 {
                     //Local class
-                    sb.Append(GenerateFieldAssignement( SourcePrefix + "." + f.Name, FieldPostfix,f.Name , f.FieldType));
+                    var r = GenerateFieldAssignement(SourcePrefix + "." + f.Name, FieldPostfix, f.Name, TargetPrefix, f.FieldType);
+                    ass.AddRange(r.GenericAssignements);
+                    sb.Append(r.Result);
                     sb.Append(",\r\n");
                 }
 
             }
             sb.AppendLine("}");
-            return sb.ToString();
+            return new FieldAssignement() { Result = sb.ToString(), GenericAssignements = ass };
         }
 
         private MethodDeclarationSyntax CreateMethodSource(MethodInfo m)
@@ -139,7 +165,7 @@ namespace GrpcServiceProvider
             {
                 LocalParamList.Append(ConvertTypeFromProto(par.ParameterType.FullName, "request." + par.Name[0].ToString().ToUpper() + par.Name.Substring(1)) + " ,");
             }
-            LocalParamList.Length--;
+            if (LocalParamList.Length > 0) LocalParamList.Length--;
 
 
             //if method returns simple type (string, int etc...)
@@ -152,10 +178,18 @@ namespace GrpcServiceProvider
             {
                 //if original method returns custom class... 
                 MethodStatements.Add(SyntaxFactory.ParseStatement("var R = bl." + m.Name + "(" + LocalParamList + ");"));
-                var a = GenerateFieldAssignement( "R", "Field", m.ReturnType.Name, m.ReturnType); //Recusivly parse all class tree
-                var v = "var rez = new  " + m.Name + "Reply() {" + a + "};";
+                var a = GenerateFieldAssignement("R", "Field", m.ReturnType.Name, "rez", m.ReturnType); //Recusivly parse all class tree
+
+
+
+                var v = "var rez = new  " + m.Name + "Reply() {" + a.Result + "};";
                 MethodStatements.Add(SyntaxFactory.ParseStatement(v));
+
+
                 MethodStatements.AddRange(GenerateGenericAssignements("rez.", "R.", "Field", m.ReturnType));
+
+
+                MethodStatements.AddRange(a.GenericAssignements);
                 MethodStatements.Add(SyntaxFactory.ParseStatement("return Task.FromResult(rez);"));
 
             }
