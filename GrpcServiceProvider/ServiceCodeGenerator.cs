@@ -96,7 +96,7 @@ namespace GrpcServiceProvider
 
 
 
-            sb.AppendLine(GenerateFieldAssignement(SourcePrefix + f.Name+"[l"+depth+"]", "", f.Name, TargetPrefix, NestedType, true).Result);
+            sb.AppendLine(GenerateFieldAssignement(SourcePrefix + f.Name+"[l"+depth+"]", FieldPostfix, f.Name+FieldPostfix, TargetPrefix, NestedType, true).Result);
 
             //foreach end
             sb.AppendLine(");");
