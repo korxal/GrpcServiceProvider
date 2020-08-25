@@ -43,7 +43,7 @@ namespace GrpcServiceProvider
                     sb.Append("  sint32 ");
                     break;
                 case "DateTime":
-                    sb.Append("  google.protobuf.Timestamp ");
+                    sb.Append("  string ");
                     break;
                 case "Double":
                 case "Decimal":
@@ -170,7 +170,7 @@ namespace GrpcServiceProvider
             string ServiceName = T.Name + "Service";
 
             //proto file header
-            ServiceDefinition.Append("syntax = \"proto3\";\r\nimport \"timestamp.proto\";\r\noption csharp_namespace = \"");
+            ServiceDefinition.Append("syntax = \"proto3\";\r\noption csharp_namespace = \"");
             ServiceDefinition.Append(BaseName);
             ServiceDefinition.Append("\";\r\npackage ");
             ServiceDefinition.Append(BaseName);
@@ -228,7 +228,7 @@ namespace GrpcServiceProvider
                         break;
 
                     case "DateTime":
-                        sb.Append("  google.protobuf.Timestamp " + p.Name + " = " + i + ";\r\n");
+                        sb.Append("  string " + p.Name + " = " + i + ";\r\n");
                         i++;
                         break;
 
